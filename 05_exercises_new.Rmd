@@ -33,6 +33,9 @@ library(gganimate)     # for adding animation layers to ggplots
 library(transformr)    # for "tweening" (gganimate)
 library(gifski)        # need the library for creating gifs but don't need to load each time
 library(shiny)         # for creating interactive apps
+library(ggthemes)      # for even more plotting themes
+library(janitor) 
+library(usmap)
 theme_set(theme_minimal())
 ```
 
@@ -56,6 +59,9 @@ panama_run <- read_csv("https://raw.githubusercontent.com/llendway/gps-data/mast
 
 #COVID-19 data from the New York Times
 covid19 <- read_csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv")
+
+# Read in the data for the week
+airmen <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-02-08/airmen.csv')
 
 ```
 
@@ -83,10 +89,61 @@ Once your repository is created, you should always open your **project** rather 
 
   1. Choose 2 graphs you have created for ANY assignment in this class and add interactivity using the `ggplotly()` function.
   
+```{r}
+tomato_harvests <- garden_harvest %>%
+  filter(vegetable == 'tomatoes') %>% 
+  mutate(day_of_week = wday(date, label = TRUE)) %>% 
+  group_by(variety, day_of_week) %>% 
+  ggplot() +
+    geom_bar(aes(y = fct_rev(day_of_week), fill = variety, text = day_of_week)) +
+    facet_wrap(~ str_to_title(variety)) +
+  labs(title = "Weekly Number of Tomato Harvests by Variety", x = "", y = "") +
+  theme_minimal() +
+  theme(legend.position = 'none') 
+
+ggplotly(tomato_harvests, tooltip = c("x", "text"))
+```
+
+```{r}
+states <- airmen %>% 
+  mutate(state = str_to_upper(state)) %>% 
+  count(state) 
+
+airmen_plot <- 
+  plot_usmap(data = states, values = "n", color = "blue", regions = "states", ) +
+  scale_fill_continuous(low = "white", high = "blue", name = "Number of Airmen", label = scales::comma) + 
+  labs(title = "Where are the Tuskegee Airmen From?", subtitle = "The Tuskegee Airmen were a group of primarily African Americans who fought in World War II", caption = "Plot created by: Claire Wilson") +
+  theme(legend.position = "right")
+
+text = ~paste('Airmen: ', values)
+ggplot(states, aes(text = ~paste('Airmen: ', n))) %>% 
+
+ggplotly(airmen_plot)
+```
+  
   2. Use animation to tell an interesting story with the `small_trains` dataset that contains data from the SNCF (National Society of French Railways). These are Tidy Tuesday data! Read more about it [here](https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-02-26).
 
 ```{r}
+trains <- small_trains %>% 
+  filter(service == "National") %>% 
+  group_by(month, year) %>% 
+  summarise(num_trips = sum(total_num_trips)) %>% 
+  ggplot(aes(y = num_trips, 
+             x = month, 
+             color = as.factor(year))) +
+  geom_line(aes(group = year)) +
+  geom_text(aes(label = year))  +
+  labs(title = "Average Number of Trips per Month over a Year",
+       subtitle = "Month: {round(frame_along, 0)}",
+       y= "Trips", 
+       x ="", 
+       color = "Year",
+       caption = "Plot created by Claire Wilson, data from the National Society of French Railways") +
+  theme(legend.position = "none") +
+  transition_reveal(month)
 
+trains <- animate(trains, duration = 15)
+anim_save("trains.gif", animation = trains)
 ```
 
 ## Garden data
@@ -100,6 +157,7 @@ Once your repository is created, you should always open your **project** rather 
 I have started the code for you below. The `complete()` function creates a row for all unique `date`/`variety` combinations. If a variety is not harvested on one of the harvest dates in the dataset, it is filled with a value of 0.
 
 ```{r}
+garden 
 garden_harvest %>% 
   filter(vegetable == "tomatoes") %>% 
   group_by(date, variety) %>% 
@@ -107,7 +165,18 @@ garden_harvest %>%
   ungroup() %>% 
   complete(variety, 
            date, 
-           fill = list(daily_harvest_lb = 0))
+           fill = list(daily_harvest_lb = 0)) %>% 
+  group_by(variety) %>% 
+  mutate(cum_variety = cumsum(daily_harvest_lb)) %>% 
+  ggplot(aes(x = date, y = cum_variety , fill = fct_rev(fct_reorder(variety, cum_variety)))) +
+  geom_area() +
+  labs(title = "Cumulative Tomato Harvest", x = "", y = "Lbs.", fill = "Variety",
+       subtitle = "Date: {frame_along}"")
+
+  # transition_reveal(date)
+  
+garden <- animate(garden, duration = 15)
+anim_save("garden.gif", animation = garden)
 ```
 
 
@@ -122,11 +191,54 @@ garden_harvest %>%
   * Show the time in the subtitle.  
   * CHALLENGE: use the `ggimage` package and `geom_image` to add a bike image instead of a red point. You can use [this](https://raw.githubusercontent.com/llendway/animation_and_interactivity/master/bike.png) image. See [here](https://goodekat.github.io/presentations/2019-isugg-gganimate-spooky/slides.html#35) for an example. 
   * Add something of your own! And comment on if you prefer this to the static map and why or why not.
+
+```{r}
+mallorca_map <- get_stamenmap(
+    bbox = c(left = 2.28, bottom = 39.41, right = 3.03, top = 39.8), 
+    maptype = "terrain",
+    zoom = 11
+)
+
+ggmap(mallorca_map) +
+  geom_point(data = mallorca_bike_day7,
+             aes(x = lon, y = lat), color = 'red', size = 1.5) +
+  geom_path(data = mallorca_bike_day7, 
+             aes(x = lon, y = lat, color = ele),
+             size = 1.5) +
+  scale_color_viridis_c(option = "magma") +
+  theme_map() +
+  theme(legend.background = element_blank()) +
+  labs(title = "When Lisa Rode Through Mallorca", subtitle = "Date: {frame_along}", color = "Elevation") +
+  transition_reveal(time)
+```
+
   
   5. In this exercise, you get to meet Lisa's sister, Heather! She is a proud Mac grad, currently works as a Data Scientist where she uses R everyday, and for a few years (while still holding a full-time job) she was a pro triathlete. You are going to map one of her races. The data from each discipline of the Ironman 70.3 Pan Am championships, Panama is in a separate file - `panama_swim`, `panama_bike`, and `panama_run`. Create a similar map to the one you created with my cycling data. You will need to make some small changes: 1. combine the files putting them in swim, bike, run order (HINT: `bind_rows()`), 2. make the leading dot a different color depending on the event (for an extra challenge, make it a different image using `geom_image()!), 3. CHALLENGE (optional): color by speed, which you will need to compute on your own from the data. You can read Heather's race report [here](https://heatherlendway.com/2016/02/10/ironman-70-3-pan-american-championships-panama-race-report/). She is also in the Macalester Athletics [Hall of Fame](https://athletics.macalester.edu/honors/hall-of-fame/heather-lendway/184) and still has records at the pool. 
   
 ```{r}
+panama_map <- get_stamenmap(
+    bbox = c(left = -79.5990, bottom = 8.8995, right = -79.4452, top = 9.0067), 
+    maptype = "terrain",
+    zoom = 13
+)
 
+tri_panama <- panama_swim %>% 
+  bind_rows(panama_bike) %>% 
+  bind_rows(panama_run) 
+  
+ggmap(panama_map) +
+  geom_point(data = tri_panama,
+             aes(x = lon, y = lat, color = event), size = 2) +
+  geom_path(data = tri_panama, 
+             aes(x = lon, y = lat, color = event),
+             size = .5) +
+  #geom_point(data = mallorca_bike_day7,
+  #           aes(x = lon, y = lat, group = seq_along(time)), colour = 'red', size = 1) +
+  #scale_color_viridis_c(option = "magma") +
+  theme_map() +
+  theme(legend.background = element_blank()) +
+  labs(title = "Heather Does the Ironman 70.3 Pan Am championships, Panama", subtitle = "Date: {frame_along}", color = "Elevation") +
+  transition_reveal(time)
 ```
   
 ## COVID-19 data
@@ -146,6 +258,9 @@ census_pop_est_2018 <- read_csv("https://www.dropbox.com/s/6txwv3b4ng7pepe/us_ce
   mutate(state = str_to_lower(state))
 
 states_map <- map_data("state")
+
+ggmap(states_map) +
+  theme_map()
 ```
 
 ## Your first `shiny` app (for next week!)
