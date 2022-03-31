@@ -168,14 +168,13 @@ garden_harvest %>%
            fill = list(daily_harvest_lb = 0)) %>% 
   group_by(variety) %>% 
   mutate(cum_variety = cumsum(daily_harvest_lb)) %>% 
-  ggplot(aes(x = date, y = cum_variety , fill = fct_rev(fct_reorder(variety, cum_variety)))) +
-  geom_area() +
+  ggplot(aes(x = date, y = cum_variety)) +
+  geom_area(aes(fill = fct_reorder(variety, cum_variety, sum))) +
   labs(title = "Cumulative Tomato Harvest", x = "", y = "Lbs.", fill = "Variety",
-       subtitle = "Date: {frame_along}"")
-
-  # transition_reveal(date)
+       subtitle = "Date: {frame_along}") +
+    transition_reveal(date)
   
-garden <- animate(garden, duration = 15)
+garden <- animate(garden, duration = 20)
 anim_save("garden.gif", animation = garden)
 ```
 
@@ -201,7 +200,7 @@ mallorca_map <- get_stamenmap(
 
 ggmap(mallorca_map) +
   geom_point(data = mallorca_bike_day7,
-             aes(x = lon, y = lat), color = 'red', size = 1.5) +
+             aes(x = lon, y = lat,  size = speed), color = 'red') +
   geom_path(data = mallorca_bike_day7, 
              aes(x = lon, y = lat, color = ele),
              size = 1.5) +
@@ -259,9 +258,32 @@ census_pop_est_2018 <- read_csv("https://www.dropbox.com/s/6txwv3b4ng7pepe/us_ce
 
 states_map <- map_data("state")
 
-ggmap(states_map) +
-  theme_map()
+covid_with_2018_pop_est <-
+  covid19 %>% 
+  mutate(state = str_to_lower(state)) %>% 
+  left_join(census_pop_est_2018) %>% 
+  mutate(cases_per_10000 = (cases/est_pop_2018)*10000) %>% 
+  filter(day(date) == 15)
+
+map <- covid_with_2018_pop_est %>% 
+  ggplot() +
+  geom_map(map = states_map,
+           aes(map_id = state,
+               fill = cases_per_10000,
+               group = date)) +
+  expand_limits(x = states_map$long, y = states_map$lat) + 
+  theme_map() +
+  labs(title = "Number of Covid Cases per 10,000 People in the US", fill = "Cases per 10,000", subtitle = "Date: {closest_state}") +
+  viridis::scale_fill_viridis(option="magma", direction = -1) +
+  transition_states(date)
+
+
+map <- animate(map, nframes= 200, end_pause = 10)
+map
+anim_save("map.gif", animation = map)
 ```
+
+We see how number of covid cases reported cumulatively change from 2020 to 2021,
 
 ## Your first `shiny` app (for next week!)
 
@@ -272,6 +294,8 @@ Put the link to your app here:
 ## GitHub link
 
   8. Below, provide a link to your GitHub repo with this set of Weekly Exercises. 
+  
+  [Link to Git](https://github.com/csswilson/ds_exercise_5.git)
 
 
 **DID YOU REMEMBER TO UNCOMMENT THE OPTIONS AT THE TOP?**
