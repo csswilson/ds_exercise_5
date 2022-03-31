@@ -12,7 +12,7 @@ output:
 
 
 ```{r setup, include=FALSE}
-#knitr::opts_chunk$set(echo = TRUE, error=TRUE, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(echo = TRUE, error=TRUE, message=FALSE, warning=FALSE)
 ```
 
 ```{r libraries}
@@ -89,7 +89,7 @@ Once your repository is created, you should always open your **project** rather 
 
   1. Choose 2 graphs you have created for ANY assignment in this class and add interactivity using the `ggplotly()` function.
   
-```{r}
+```{r, fig.alt= "This is a graph of the total number tomato harvests per day of week, for each variety of tomato."}
 tomato_harvests <- garden_harvest %>%
   filter(vegetable == 'tomatoes') %>% 
   mutate(day_of_week = wday(date, label = TRUE)) %>% 
@@ -104,7 +104,7 @@ tomato_harvests <- garden_harvest %>%
 ggplotly(tomato_harvests, tooltip = c("x", "text"))
 ```
 
-```{r}
+```{r, fig.alt= "This is a map showing the number of the Tuskegee Airmen that were from a given state."}
 states <- airmen %>% 
   mutate(state = str_to_upper(state)) %>% 
   count(state) 
@@ -115,16 +115,13 @@ airmen_plot <-
   labs(title = "Where are the Tuskegee Airmen From?", subtitle = "The Tuskegee Airmen were a group of primarily African Americans who fought in World War II", caption = "Plot created by: Claire Wilson") +
   theme(legend.position = "right")
 
-text = ~paste('Airmen: ', values)
-ggplot(states, aes(text = ~paste('Airmen: ', n))) %>% 
-
 ggplotly(airmen_plot)
 ```
   
   2. Use animation to tell an interesting story with the `small_trains` dataset that contains data from the SNCF (National Society of French Railways). These are Tidy Tuesday data! Read more about it [here](https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-02-26).
 
-```{r}
-trains <- small_trains %>% 
+```{r, fig.alt= "This animation shows the number of Naitonal railway trips, measured by the National Society of French Railways, that occur in a given month. For the years 2015, 2016, and 2017, we see the average number of trips that occur in a given month. We can see the similarities between the 3 years - such as trips tend to increase in March - but we can also see differences. 2016 had a lower number of trips that the other two years it seems."}
+small_trains %>% 
   filter(service == "National") %>% 
   group_by(month, year) %>% 
   summarise(num_trips = sum(total_num_trips)) %>% 
@@ -133,7 +130,7 @@ trains <- small_trains %>%
              color = as.factor(year))) +
   geom_line(aes(group = year)) +
   geom_text(aes(label = year))  +
-  labs(title = "Average Number of Trips per Month over a Year",
+  labs(title = "Average Number of National Trips per Month over a Year",
        subtitle = "Month: {round(frame_along, 0)}",
        y= "Trips", 
        x ="", 
@@ -142,8 +139,6 @@ trains <- small_trains %>%
   theme(legend.position = "none") +
   transition_reveal(month)
 
-trains <- animate(trains, duration = 15)
-anim_save("trains.gif", animation = trains)
 ```
 
 ## Garden data
@@ -156,8 +151,8 @@ anim_save("trains.gif", animation = trains)
 
 I have started the code for you below. The `complete()` function creates a row for all unique `date`/`variety` combinations. If a variety is not harvested on one of the harvest dates in the dataset, it is filled with a value of 0.
 
-```{r}
-garden 
+```{r, fig.alt = "For each tomato variety in Lisa's garden, we see the cumulative harvest in pounds revealed over time. All varieties start with a small weight of totatoes harvested, and the grow over the span of the summer. The varieties are ordered from most harvested at the bottom to least at the top."}
+
 garden_harvest %>% 
   filter(vegetable == "tomatoes") %>% 
   group_by(date, variety) %>% 
@@ -173,9 +168,7 @@ garden_harvest %>%
   labs(title = "Cumulative Tomato Harvest", x = "", y = "Lbs.", fill = "Variety",
        subtitle = "Date: {frame_along}") +
     transition_reveal(date)
-  
-garden <- animate(garden, duration = 20)
-anim_save("garden.gif", animation = garden)
+
 ```
 
 
@@ -191,7 +184,7 @@ anim_save("garden.gif", animation = garden)
   * CHALLENGE: use the `ggimage` package and `geom_image` to add a bike image instead of a red point. You can use [this](https://raw.githubusercontent.com/llendway/animation_and_interactivity/master/bike.png) image. See [here](https://goodekat.github.io/presentations/2019-isugg-gganimate-spooky/slides.html#35) for an example. 
   * Add something of your own! And comment on if you prefer this to the static map and why or why not.
 
-```{r}
+```{r, fig.alt= "This is an animation of Lisa's ride through Mallorca Spain. It shows where on the loop she is located at a given time, indicated by a red dot. The dot travels around the bike loop over time, and it changes size depending on the speed at which Lisa was going. The path she takes is also labeled with the elevation of the path at a given point. From this animaiton, we get a sense of Lisa's speed, location, direction, and the elevaiton she was at."}
 mallorca_map <- get_stamenmap(
     bbox = c(left = 2.28, bottom = 39.41, right = 3.03, top = 39.8), 
     maptype = "terrain",
@@ -211,10 +204,12 @@ ggmap(mallorca_map) +
   transition_reveal(time)
 ```
 
-  
+I added that the size of the leading dot changes based on the speed at that given point. I think it is cool to see the speed change relative to elevation at a given point because I expect the speed to increase halfway through the elevation change, when Lisa stops going up hill and starts going down hill. I think I get more information from the animation because at a given time I can see how the two interact. I can also see which parts of the path took longer based on space and time. Therefore while it is a bit chaotic, I prefer the animation.
+ 
   5. In this exercise, you get to meet Lisa's sister, Heather! She is a proud Mac grad, currently works as a Data Scientist where she uses R everyday, and for a few years (while still holding a full-time job) she was a pro triathlete. You are going to map one of her races. The data from each discipline of the Ironman 70.3 Pan Am championships, Panama is in a separate file - `panama_swim`, `panama_bike`, and `panama_run`. Create a similar map to the one you created with my cycling data. You will need to make some small changes: 1. combine the files putting them in swim, bike, run order (HINT: `bind_rows()`), 2. make the leading dot a different color depending on the event (for an extra challenge, make it a different image using `geom_image()!), 3. CHALLENGE (optional): color by speed, which you will need to compute on your own from the data. You can read Heather's race report [here](https://heatherlendway.com/2016/02/10/ironman-70-3-pan-american-championships-panama-race-report/). She is also in the Macalester Athletics [Hall of Fame](https://athletics.macalester.edu/honors/hall-of-fame/heather-lendway/184) and still has records at the pool. 
   
-```{r}
+```{r, fig.alt= "This is an animation of Heather's path doing the Ironman 70.3 Pan Am Championships in Panama City. She first starts by swimming to shore, then bikes the length of a path about 3 times, and finishes by running. You can see when she switches to each event and how long each event takes her, as well as where she is at any given point."}
+
 panama_map <- get_stamenmap(
     bbox = c(left = -79.5990, bottom = 8.8995, right = -79.4452, top = 9.0067), 
     maptype = "terrain",
@@ -231,9 +226,6 @@ ggmap(panama_map) +
   geom_path(data = tri_panama, 
              aes(x = lon, y = lat, color = event),
              size = .5) +
-  #geom_point(data = mallorca_bike_day7,
-  #           aes(x = lon, y = lat, group = seq_along(time)), colour = 'red', size = 1) +
-  #scale_color_viridis_c(option = "magma") +
   theme_map() +
   theme(legend.background = element_blank()) +
   labs(title = "Heather Does the Ironman 70.3 Pan Am championships, Panama", subtitle = "Date: {frame_along}", color = "Elevation") +
@@ -250,7 +242,8 @@ ggmap(panama_map) +
   * Use `group = date` in `aes()`.   
   * Comment on what you see.  
 
-```{r}
+```{r, fig.alt= "We see how number of covid cases reported cumulatively change from 2020 to 2021, over each month. States that become a lot darker between months experienced a lot more covid cases over that last month than the states that barely changed color. We can make observations about which states grew darker over the summer time versus the winter and which states started off with the most cases and whether they also ended with the most cases."}
+
 census_pop_est_2018 <- read_csv("https://www.dropbox.com/s/6txwv3b4ng7pepe/us_census_2018_state_pop_est.csv?dl=1") %>% 
   separate(state, into = c("dot","state"), extra = "merge") %>% 
   select(-dot) %>% 
@@ -280,10 +273,9 @@ map <- covid_with_2018_pop_est %>%
 
 map <- animate(map, nframes= 200, end_pause = 10)
 map
-anim_save("map.gif", animation = map)
 ```
 
-We see how number of covid cases reported cumulatively change from 2020 to 2021,
+We see how number of covid cases reported cumulatively change from 2020 to 2021, over each month. States that become a lot darker between months experienced a lot more covid cases over that last month than the states that barely changed color. We can make observations about which states grew darker over the summer time versus the winter and which states started off with the most cases and whether they also ended with the most cases. 
 
 ## Your first `shiny` app (for next week!)
 
